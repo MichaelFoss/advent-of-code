@@ -1,0 +1,9 @@
+const Directions = {
+  NORTH: 'N',
+  SOUTH: 'S',
+  EAST: 'E',
+  WEST: 'W',
+};
+
+module.exports = Directions;
+
