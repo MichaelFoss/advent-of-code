@@ -1,25 +1,19 @@
 const fs = require('fs');
 
-// 9706670
-const REPLACE_ENTRIES = true;
+// 12, 2
+const TARGET = 19690720;
 const INPUT_FILE = '02.input.txt';
-// 3500
-// const REPLACE_ENTRIES = false;
+// 9, 10
+// const TARGET = 3500;
 // const INPUT_FILE = '02.test.txt';
 
 let data = fs.readFileSync(INPUT_FILE, 'utf-8')
     .split(',')
     .map(x => parseInt(x));
 
-// Requirements per the original problem ¯\_(ツ)_/¯
-if (REPLACE_ENTRIES) {
-    data[1] = 12;
-    data[2] = 2;
-}
-
 const MAX_OPS = 1000;
 
-const main = code => {
+const runProgram = (code, noun, verb, target) => {
     let opPointer = 0;
     let ops = 0;
 
@@ -45,11 +39,33 @@ const main = code => {
             throw new Error(`Operations exceeded MAX_OPS of ${MAX_OPS}.`);
         }
         else {
-            return code[0];
+            if (code[0] !== target) {
+                throw new Error(`${code[0]} !== ${target}.`);
+            }
+            else {
+                return { noun, verb };
+            }
         }
     }
     catch (err) {
         throw err;
+    }
+};
+
+const main = code => {
+    for (let noun = 0; noun < MAX_OPS; noun++) {
+        for (let verb = 0; verb < MAX_OPS; verb++) {
+            try {
+                const newCode = [...code];
+                newCode[1] = noun;
+                newCode[2] = verb;
+                const result = runProgram(newCode, noun, verb, TARGET);
+                return `100 * ${result.noun} + ${result.verb} = ${100 * result.noun + result.verb}`;
+            }
+            catch (err) {
+                console.log(`${noun}, ${verb}: ${err.message}`);
+            }
+        }
     }
 };
 
