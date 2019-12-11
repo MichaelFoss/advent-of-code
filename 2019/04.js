@@ -6,8 +6,24 @@ const [ MIN, MAX ] = [ 235741, 706948 ];
 const hasDuplicateDigit = num => {
   const numStr = num.toString();
   for (let i = 0; i < numStr.length - 1; i++) {
-    if (numStr[i] === numStr[i + 1]) {
-      return true;
+    const matches = numStr[i] === numStr[i + 1];
+    switch (i) {
+      case 0:
+        if (matches && numStr[i + 1] !== numStr[i + 2]) {
+          return true;
+        }
+        break;
+
+      case 4:
+        if (matches && numStr[i - 1] !== numStr[i]) {
+          return true;
+        }
+        break;
+
+      default:
+        if (matches && numStr[i - 1] !== numStr[i] && numStr[i + 1] !== numStr[i + 2]) {
+          return true;
+        }
     }
   }
   return false;
