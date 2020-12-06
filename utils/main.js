@@ -21,6 +21,7 @@ const main = mainFn => {
     encoding: 'utf8',
     flag: 'r',
   })
+    .replace(/\r/g, '')
     .trim();
   console.log(mainFn(input));
 }
