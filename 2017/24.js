@@ -1,6 +1,6 @@
-const FILENAME = './24.test.small.txt';
+// const FILENAME = './24.test.small.txt';
 // const FILENAME = './24.test.txt';
-// const FILENAME = './24.input.txt';
+const FILENAME = './24.input.txt';
 
 const { Piece } = require('./24.piece.js');
 const { runTests } = require('./24.unitTests.js');
@@ -19,7 +19,7 @@ function parseData(fileName) {
     const numbers = line.split('/').map(x => Number.parseInt(x));
     pieces.push(new Piece(numbers[0], numbers[1]));
   });
-  return pieces;
+  return Piece.sort(pieces);
 }
 
 /**
@@ -32,6 +32,6 @@ function part1() {
   console.log(maxPath);
 }
 
-runTests();
+//runTests();
 
-//part1();
+part1();

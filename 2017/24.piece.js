@@ -1,5 +1,7 @@
 const DEBUGGING = true;
 
+const debug = (s, recursiveCall) => DEBUGGING ? console.log(' '.repeat(recursiveCall * 6) + s) : null;
+
 /**
  * A piece.
  */
@@ -19,9 +21,19 @@ class Piece {
     return (
       this.tail === piece.head ||
       this.tail === piece.tail ||
-      this.tail === Piece.prototype.WILD ||
-      piece.head === Piece.prototype.WILD ||
-      piece.tail === Piece.prototype.WILD
+      this.head === Piece.WILD ||
+      this.tail === Piece.WILD ||
+      piece.head === Piece.WILD ||
+      piece.tail === Piece.WILD
+    );
+  }
+
+  isTailMatch(piece) {
+    return (
+      this.tail === piece.head ||
+      this.tail === Piece.WILD ||
+      piece.head === Piece.WILD ||
+      piece.tail === Piece.WILD
     );
   }
 
@@ -33,8 +45,8 @@ class Piece {
    */
   getScore() {
     return (
-      (this.head !== Piece.prototype.WILD ? this.head : 0) +
-      (this.tail !== Piece.prototype.WILD ? this.tail : 0)
+      (this.head !== Piece.WILD ? this.head : 0) +
+      (this.tail !== Piece.WILD ? this.tail : 0)
     );
   }
 
@@ -46,12 +58,26 @@ class Piece {
    */
   getMatches(pieces) {
     const children = [];
-    pieces.map(piece => {
+    pieces.forEach(piece => {
       if (this.isMatch(piece)) {
-        children.push(piece);
+        children.push(piece.copy());
       }
     });
     return children;
+  }
+
+  getTailMatches(pieces) {
+    const matching = pieces
+      .filter(piece => {
+        if (this.isTailMatch(piece)) {
+          return true;
+        }
+        const flipped = piece.copy();
+        flipped.flip();
+        return this.isTailMatch(flipped);
+      })
+      .map(piece => piece.copy());
+    return matching;
   }
 
   /**
@@ -64,12 +90,42 @@ class Piece {
   }
 
   /**
+   * Given an array of pieces,
+   * returns a NEW array of NEW pieces.
+   * @param {Piece[]} pieces
+   * @returns {Piece[]}
+   */
+  static sort(pieces) {
+    const newPieces = [
+      ...pieces.map(piece => piece.copy()),
+    ];
+    newPieces.forEach(piece => {
+      if (piece.head > piece.tail) {
+        piece.flip();
+      }
+    });
+    newPieces.sort((a, b) => {
+      const minA = Math.min(a.head, a.tail);
+      const minB = Math.min(b.head, b.tail);
+      if (minA === minB) {
+        const maxA = Math.max(a.head, a.tail);
+        const maxB = Math.max(b.head, b.tail);
+        return maxA - maxB;
+      }
+      else {
+        return minA - minB;
+      }
+    });
+    return newPieces;
+  }
+
+  /**
    * Determines whether or not a piece is a root.
    *
    * @returns {boolean}
    */
   isRoot() {
-    return this.head === Piece.prototype.WILD && this.tail === Piece.prototype.WILD;
+    return this.head === null || this.tail === null;
   }
 
   /**
@@ -81,7 +137,8 @@ class Piece {
    */
   equals(piece) {
     return (
-      this.head === piece.head && this.tail === piece.tail
+        this.head === piece.head && this.tail === piece.tail ||
+        this.head === piece.tail && this.tail === piece.head
     );
   }
 
@@ -94,15 +151,9 @@ class Piece {
    * @return {Piece[]}
    */
   excludeFrom(pieces) {
-    const otherPieces = [];
-    const flipped = Piece.clone(this);
-    flipped.flip();
-    pieces.forEach(newPiece => {
-      if (!this.equals(newPiece) && !flipped.equals(newPiece)) {
-        otherPieces.push(Piece.clone(newPiece));
-      }
-    });
-    return otherPieces;
+    return pieces
+        .filter(piece => !this.equals(piece))
+        .map(piece => piece.copy());
   }
 
   /**
@@ -111,7 +162,7 @@ class Piece {
    * @return {Piece}
    */
   static getRoot() {
-    return new Piece(Piece.prototype.WILD, Piece.prototype.WILD);
+    return new Piece(null, 0);
   }
 
   /**
@@ -125,57 +176,54 @@ class Piece {
   }
 
   /**
+   * Creates a copy of the existing Piece.
+   *
+   * @return {Piece}
+   */
+  copy() {
+    return Piece.clone(this);
+  }
+
+  /**
    * Gets a max path from the current piece
    * based on a set of available pieces.
    *
    * @param {Piece[]} pieces
+   * @param {number} [recursiveCall]
    * @return {Piece[]}
    */
-  getMaxPath(pieces) {
-    if (pieces.length === 0) {
+  getMaxPath(pieces, recursiveCall = 0) {
+    const remainingPieces = this.excludeFrom(pieces);
+    const matchingPieces = this.getMatches(remainingPieces);
+    if (matchingPieces.length === 0) {
       return [];
     }
 
-    if (DEBUGGING) {
-      console.log(`• Getting max path for piece ${this}: [${pieces.map(piece => piece.toString()).join(', ')}]`);
-    }
+    debug(`• MAX PATH --> ${this}`, recursiveCall);
+    debug(`•          --> ${Piece.listToString(matchingPieces)}`, recursiveCall);
+    debug(`•          --> ${Piece.listToString(remainingPieces)}`, recursiveCall);
 
     const paths = [];
 
-    // Grow tree
-    pieces.forEach(piece => {
-      // Form each other path
-      const otherPieces = piece.excludeFrom(pieces);
-      const matchingPieces = piece.getMatches(otherPieces);
-      console.log(`• Piece: ${piece}`);
-      console.log(`• Pieces: [${pieces.map(piece => piece.toString()).join(', ')}]`);
-      console.log(`• Other Pieces: [${otherPieces.map(piece => piece.toString()).join(', ')}]`);
-      console.log(`• Matching Pieces: [${matchingPieces.map(piece => piece.toString()).join(', ')}]`);
-
-      // If nothing, then build just the piece
-      if (matchingPieces.length === 0) {
-        paths.push([piece]);
+    // For every MATCHING piece...
+    matchingPieces.forEach(matchingPiece => {
+      // ...find the longest path based on all REMAINING pieces
+      console.log(`GMP1: ${this}, ${matchingPiece}`);
+      if (!this.isTailMatch(matchingPiece)) {
+        matchingPiece.flip();
       }
-      // Otherwise, check the remaining pieces
-      else {
-        // For every piece that can connect...
-        matchingPieces.forEach(matchingPiece => {
-          // ...find the longest path based on all other pieces
-          console.log(`• Building tree for piece ${matchingPiece}: [${matchingPiece.excludeFrom(otherPieces).map(piece => piece.toString()).join(', ')}]`);
-          paths.push([piece, ...matchingPiece.getMaxPath(matchingPiece.excludeFrom(otherPieces))]);
-        });
-      }
+      console.log(`GMP2: ${this}, ${matchingPiece}`);
+      const matchingPieceMaxPath = matchingPiece.getMaxPath(remainingPieces, recursiveCall + 1);
+      paths.push([matchingPiece, ...matchingPieceMaxPath]);
     });
 
-    if (DEBUGGING) {
-      console.log(`• All Possible Paths for ${this} (${paths.length}):\n  ${paths.map(path => '[' + path.map(piece => piece.toString()).join(', ') + ']').join('\n  ')}`);
-    }
+    debug(`• All Possible Paths for ${this} (${paths.length}):\n${' '.repeat(recursiveCall * 6 + 4)}${paths.map(path => `[${Piece.listToString(path)}] (${path.reduce((sum, piece) => sum + piece.getScore(), 0)})`).join(`\n${' '.repeat(recursiveCall * 6 + 4)}`)}`, recursiveCall);
 
     // Reduce tree
     let maxPathScore = 0;
-    console.log(`• Reducing paths:`);
+    //debug(`• Reducing paths:`, recursiveCall);
     const maxPath = paths.reduce((maxPath, currentPath) => {
-      console.log(`  ° Max Path: [${maxPath.map(piece => piece.toString()).join(', ')}], Current Path: [${currentPath.map(piece => piece.toString()).join(', ')}]`);
+      //debug(`  ° Max Path: [${maxPath.map(piece => piece.toString()).join(', ')}], Current Path: [${currentPath.map(piece => piece.toString()).join(', ')}]`, recursiveCall);
       let currentPathScore = currentPath.reduce((sum, piece) => sum + piece.getScore(), 0);
       if (currentPathScore > maxPathScore) {
         maxPathScore = currentPathScore;
@@ -186,9 +234,8 @@ class Piece {
       }
     }, []);
 
-    if (DEBUGGING) {
-      console.log(`• Max Path for ${this}: [${maxPath.map(piece => piece.toString()).join(', ')}]`);
-    }
+    debug(`• Max Path for ${this} (${maxPathScore}): [${Piece.listToString(maxPath)}]`, recursiveCall);
+    return maxPath;
   }
 
   /**
@@ -197,13 +244,17 @@ class Piece {
    * @returns {string}
    */
   toString() {
-    return `<${this.head},${this.tail}>`;
+    return `${this.head}/${this.tail}`;
   }
-}
 
-/**
- * A number to assign to a piece to mark it as matching anything.
- */
-Piece.prototype.WILD = -1;
+  static listToString(list) {
+    return list.map(piece => piece.toString()).join('--');
+  }
+
+  /**
+   * A number to assign to a piece to mark it as matching anything.
+   */
+  static WILD = -1;
+}
 
 module.exports = { Piece };
