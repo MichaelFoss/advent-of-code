@@ -1,6 +1,6 @@
 // const FILENAME = './24.test.small.txt';
 // const FILENAME = './24.test.txt';
-const FILENAME = './24.input.txt';
+const FILENAME = './24.input.txt'; // < 1859
 
 const { Piece } = require('./24.piece.js');
 const { runTests } = require('./24.unitTests.js');
@@ -32,6 +32,18 @@ function part1() {
   console.log(maxPath);
 }
 
+/**
+ * Part 2.
+ */
+function part2() {
+  const pieces = parseData(FILENAME);
+  const rootPiece = Piece.getRoot();
+  const longestPath = rootPiece.getLongestPath(pieces);
+  console.log(`• Longest Path (${longestPath.length} / ${Piece.getListScore(longestPath)}): [${Piece.listToString(longestPath)}]`);
+}
+
 //runTests();
 
-part1();
+//part1();
+part2();
+

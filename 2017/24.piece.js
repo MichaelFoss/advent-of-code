@@ -1,4 +1,4 @@
-const DEBUGGING = true;
+const DEBUGGING = false;
 
 const debug = (s, recursiveCall) => DEBUGGING ? console.log(' '.repeat(recursiveCall * 6) + s) : null;
 
@@ -208,11 +208,9 @@ class Piece {
     // For every MATCHING piece...
     matchingPieces.forEach(matchingPiece => {
       // ...find the longest path based on all REMAINING pieces
-      console.log(`GMP1: ${this}, ${matchingPiece}`);
       if (!this.isTailMatch(matchingPiece)) {
         matchingPiece.flip();
       }
-      console.log(`GMP2: ${this}, ${matchingPiece}`);
       const matchingPieceMaxPath = matchingPiece.getMaxPath(remainingPieces, recursiveCall + 1);
       paths.push([matchingPiece, ...matchingPieceMaxPath]);
     });
@@ -224,7 +222,7 @@ class Piece {
     //debug(`• Reducing paths:`, recursiveCall);
     const maxPath = paths.reduce((maxPath, currentPath) => {
       //debug(`  ° Max Path: [${maxPath.map(piece => piece.toString()).join(', ')}], Current Path: [${currentPath.map(piece => piece.toString()).join(', ')}]`, recursiveCall);
-      let currentPathScore = currentPath.reduce((sum, piece) => sum + piece.getScore(), 0);
+      let currentPathScore = Piece.getListScore(currentPath);
       if (currentPathScore > maxPathScore) {
         maxPathScore = currentPathScore;
         return currentPath;
@@ -239,6 +237,67 @@ class Piece {
   }
 
   /**
+   * Gets the longest path from the current piece
+   * based on a set of available pieces;
+   * if tied, gets the max path.
+   *
+   * @param {Piece[]} pieces
+   * @param {number} [recursiveCall]
+   * @return {Piece[]}
+   */
+  getLongestPath(pieces, recursiveCall = 0) {
+    const remainingPieces = this.excludeFrom(pieces);
+    const matchingPieces = this.getMatches(remainingPieces);
+    if (matchingPieces.length === 0) {
+      return [];
+    }
+
+    debug(`• MAX PATH --> ${this}`, recursiveCall);
+    debug(`•          --> ${Piece.listToString(matchingPieces)}`, recursiveCall);
+    debug(`•          --> ${Piece.listToString(remainingPieces)}`, recursiveCall);
+
+    const paths = [];
+
+    // For every MATCHING piece...
+    matchingPieces.forEach(matchingPiece => {
+      // ...find the longest path based on all REMAINING pieces
+      if (!this.isTailMatch(matchingPiece)) {
+        matchingPiece.flip();
+      }
+      const matchingPieceMaxPath = matchingPiece.getLongestPath(remainingPieces, recursiveCall + 1);
+      paths.push([matchingPiece, ...matchingPieceMaxPath]);
+    });
+
+    debug(`• All Possible Paths for ${this} (${paths.length}):\n${' '.repeat(recursiveCall * 6 + 4)}${paths.map(path => `[${Piece.listToString(path)}] (${path.reduce((sum, piece) => sum + piece.getScore(), 0)})`).join(`\n${' '.repeat(recursiveCall * 6 + 4)}`)}`, recursiveCall);
+
+    // Reduce tree
+    let maxPathLength = 0;
+    const maxPath = paths.reduce((maxPath, currentPath) => {
+      let currentPathLength = currentPath.length;
+      if (currentPathLength > maxPathLength) {
+        maxPathLength = currentPathLength;
+        return currentPath;
+      }
+      // else if (currentPathLength === maxPathLength) {
+      //   const currentPathScore = Piece.getListScore(currentPath);
+      //   const maxPathScore = Piece.getListScore(maxPath);
+      //   if (maxPathScore > currentPathScore) {
+      //     return maxPath;
+      //   }
+      //   else {
+      //     return currentPath;
+      //   }
+      // }
+      else {
+        return maxPath;
+      }
+    }, []);
+
+    debug(`• Max Path for ${this} (${maxPathLength}) / ${Piece.getListScore(maxPath)}): [${Piece.listToString(maxPath)}]`, recursiveCall);
+    return maxPath;
+  }
+
+  /**
    * Returns a string representation of the object.
    *
    * @returns {string}
@@ -249,6 +308,10 @@ class Piece {
 
   static listToString(list) {
     return list.map(piece => piece.toString()).join('--');
+  }
+
+  static getListScore(list) {
+    return list.reduce((sum, piece) => sum + piece.getScore(), 0);
   }
 
   /**
