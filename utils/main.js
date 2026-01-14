@@ -15,16 +15,26 @@
 
 const fs = require('fs');
 
-const main = mainFn => {
+const defaultOptions = {
+  stripWhitespace: true,
+};
+
+const main = (mainFn, options = {}) => {
+  const allOptions = {
+    ...defaultOptions,
+    ...options,
+  };
   const inputFile = process.argv[2];
-  const input = fs.readFileSync(inputFile, {
-    encoding: 'utf8',
-    flag: 'r',
-  })
-    .replace(/\r/g, '')
-    .trim();
+  let input = fs
+    .readFileSync(inputFile, {
+      encoding: 'utf8',
+      flag: 'r',
+    })
+    .replace(/\r/g, '');
+  if (allOptions?.stripWhitespace) {
+    input = input.trim();
+  }
   console.log(mainFn(input));
-}
+};
 
 module.exports = main;
-
